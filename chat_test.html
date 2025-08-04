@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>PYME Market Chat</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+
+    #chatContainer {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    #messages {
+      border: 1px solid #ccc;
+      height: 300px;
+      overflow-y: scroll;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    .message {
+      margin-bottom: 10px;
+    }
+
+    .username {
+      font-weight: bold;
+      color: #007bff;
+    }
+
+    .timestamp {
+      font-size: 0.8em;
+      color: #666;
+    }
+
+    .system-message {
+      color: #28a745;
+      font-style: italic;
+    }
+
+    #messageInput {
+      width: 70%;
+      padding: 5px;
+    }
+
+    #sendButton {
+      width: 25%;
+      padding: 5px;
+    }
+
+    #userInfo {
+      margin-bottom: 10px;
+    }
+
+    #userInfo input {
+      margin: 5px;
+      padding: 5px;
+    }
+
+    #connectionStatus {
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+    }
+
+    .connected {
+      background-color: #d4edda;
+      color: #155724;
+    }
+
+    .disconnected {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+
+    #usersOnline {
+      margin-top: 10px;
+      padding: 10px;
+      background-color: #f8f9fa;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="chatContainer">
+    <h1>PYME Market Chat</h1>
+
+    <div id="connectionStatus" class="disconnected">
+      Desconectado
+    </div>
+
+    <div id="userInfo">
+      <input type="text" id="usernameInput" placeholder="Tu nombre de usuario" value="Usuario123">
+      <input type="text" id="roomInput" placeholder="Sala (opcional)" value="general">
+      <button id="connectButton" onclick="connect()">Conectar</button>
+      <button id="disconnectButton" onclick="disconnect()" disabled>Desconectar</button>
+    </div>
+
+    <div id="messages"></div>
+
+    <div>
+      <input type="text" id="messageInput" placeholder="Escribe tu mensaje..." disabled>
+      <button id="sendButton" onclick="sendMessage()" disabled>Enviar</button>
+    </div>
+
+    <div id="usersOnline">
+      <strong>Usuarios conectados:</strong>
+      <ul id="usersList"></ul>
+    </div>
+  </div>
+
+  <script>
+    let socket = null;
+    let username = '';
+    let roomId = '';
+
+    function connect() {
+      username = document.getElementById('usernameInput').value.trim();
+      roomId = document.getElementById('roomInput').value.trim() || 'general';
+
+      if (!username) {
+        alert('Por favor ingresa un nombre de usuario');
+        return;
+      }
+
+      const wsUrl = `ws://localhost:8003/chat/ws?username=${encodeURIComponent(username)}&room_id=${encodeURIComponent(roomId)}`;
+      socket = new WebSocket(wsUrl);
+
+      socket.onopen = function (event) {
+        updateConnectionStatus(true);
+        document.getElementById('messageInput').disabled = false;
+        document.getElementById('sendButton').disabled = false;
+        document.getElementById('connectButton').disabled = true;
+        document.getElementById('disconnectButton').disabled = false;
+        document.getElementById('usernameInput').disabled = true;
+        document.getElementById('roomInput').disabled = true;
+      };
+
+      socket.onmessage = function (event) {
+        const data = JSON.parse(event.data);
+        handleMessage(data);
+      };
+
+      socket.onclose = function (event) {
+        updateConnectionStatus(false);
+        document.getElementById('messageInput').disabled = true;
+        document.getElementById('sendButton').disabled = true;
+        document.getElementById('connectButton').disabled = false;
+        document.getElementById('disconnectButton').disabled = true;
+        document.getElementById('usernameInput').disabled = false;
+        document.getElementById('roomInput').disabled = false;
+      };
+
+      socket.onerror = function (error) {
+        console.error('WebSocket error:', error);
+        addSystemMessage('Error de conexión');
+      };
+    }
+
+    function disconnect() {
+      if (socket) {
+        socket.close();
+      }
+    }
+
+    function sendMessage() {
+      const messageInput = document.getElementById('messageInput');
+      const content = messageInput.value.trim();
+
+      if (!content || !socket) return;
+
+      const message = {
+        type: 'message',
+        content: content,
+        username: username,
+        room_id: roomId
+      };
+
+      socket.send(JSON.stringify(message));
+      messageInput.value = '';
+    }
+
+    function handleMessage(data) {
+      switch (data.type) {
+        case 'message':
+          addMessage(data.username, data.content, data.timestamp);
+          break;
+        case 'history':
+          loadHistory(data.messages);
+          break;
+        case 'user_joined':
+        case 'user_left':
+          addSystemMessage(data.message);
+          if (data.users_online) {
+            updateUsersList(data.users_online);
+          }
+          break;
+        case 'users_online':
+          updateUsersList(data.users);
+          break;
+      }
+    }
+
+    function addMessage(username, content, timestamp) {
+      const messagesDiv = document.getElementById('messages');
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'message';
+
+      const time = new Date(timestamp).toLocaleTimeString();
+      messageDiv.innerHTML = `
+                <span class="username">${username}:</span> ${content}
+                <span class="timestamp">(${time})</span>
+            `;
+
+      messagesDiv.appendChild(messageDiv);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function addSystemMessage(message) {
+      const messagesDiv = document.getElementById('messages');
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'message system-message';
+      messageDiv.textContent = message;
+
+      messagesDiv.appendChild(messageDiv);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function loadHistory(messages) {
+      const messagesDiv = document.getElementById('messages');
+      messagesDiv.innerHTML = '';
+
+      messages.forEach(msg => {
+        addMessage(msg.username, msg.content, msg.timestamp);
+      });
+    }
+
+    function updateUsersList(users) {
+      const usersList = document.getElementById('usersList');
+      usersList.innerHTML = '';
+
+      users.forEach(user => {
+        const li = document.createElement('li');
+        li.textContent = user;
+        usersList.appendChild(li);
+      });
+    }
+
+    function updateConnectionStatus(connected) {
+      const statusDiv = document.getElementById('connectionStatus');
+      if (connected) {
+        statusDiv.textContent = `Conectado como ${username} en la sala ${roomId}`;
+        statusDiv.className = 'connected';
+      } else {
+        statusDiv.textContent = 'Desconectado';
+        statusDiv.className = 'disconnected';
+      }
+    }
+
+    // Enviar mensaje con Enter
+    document.getElementById('messageInput').addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') {
+        sendMessage();
+      }
+    });
+  </script>
+</body>
+
+</html>
