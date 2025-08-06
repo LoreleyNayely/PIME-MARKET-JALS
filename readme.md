@@ -35,7 +35,7 @@ PYME-MARKET/
 ├── pyme-market-products/  # Microservicio de productos
 ├── pyme-market-orders/    # Microservicio de órdenes
 ├── pyme-market-chat/      # Microservicio de chat
-└── frontend/              # Proyecto en React
+└── pyme-market/              # Proyecto en React
 ```
 
 ---
@@ -144,4 +144,5 @@ pytest
 ```
 
 ---
+
 
