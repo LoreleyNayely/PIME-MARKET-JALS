@@ -1,0 +1,66 @@
+services:
+  frontend:
+    build:
+      context: ./pyme-market
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+
+  auth:
+    build:
+      context: ./pyme-market-auth
+      dockerfile: Dockerfile
+    env_file:
+      - ./pyme-market-auth/.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - database
+
+  products:
+    build:
+      context: ./pyme-market-products
+      dockerfile: Dockerfile
+    env_file:
+      - ./pyme-market-products/.env
+    ports:
+      - "8001:8001"
+    depends_on:
+      - database
+
+
+  orders:
+    build:
+      context: ./pyme-market-order
+      dockerfile: Dockerfile
+    env_file:
+      - ./pyme-market-order/.env
+    ports:
+      - "8002:8002"
+    depends_on:
+      - database
+
+  chat:
+    build:
+      context: ./pyme-market-chat
+      dockerfile: Dockerfile
+    env_file:
+      - ./pyme-market-chat/.env
+    ports:
+      - "8003:8003"
+    depends_on:
+      - database
+
+  database:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: root
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./db-init:/docker-entrypoint-initdb.d
+
+volumes:
+  db_data:
