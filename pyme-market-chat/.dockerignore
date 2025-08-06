@@ -1,0 +1,49 @@
+# Ignorar archivos de entorno
+.env
+.pylintrc
+.coverage
+coverage.xml
+
+# Ignorar el Dockerfile
+Dockerfile
+
+# Ignorar la carpeta de pruebas
+.pytest_cache/
+.scannerwork/
+tests/
+_pycache_/
+*.pyc
+venv/
+env/
+.venv/
+
+# Ignorar archivos de configuración de desarrollo
+*.local
+*.dev
+*.test
+*.ini
+
+# Ignorar archivos de requisitos de desarrollo (opcional)
+requirements-dev.txt
+
+# Ignorar archivos de caché de Python
+*.py[cod]
+*.pyo
+
+# Ignorar archivos de documentación (opcional)
+doc/
+
+# Ignorar archivos de control de versiones
+.git/
+.gitignore
+
+# Ignorar archivos de compilación de paquetes
+build/
+dist/
+*.egg-info/
+
+# Ignorar archivos de configuración del entorno de desarrollo
+.vscode/
+.idea/
+
+README.md
